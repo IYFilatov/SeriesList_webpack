@@ -1,5 +1,3 @@
-import { result } from "lodash";
-
 export function getColorByHSLRange(rangeArr, currValue, min, max){
     let percent = getPercentByRange(currValue, min, max);
     
