@@ -9,6 +9,8 @@ export class SeriesListTableClass{
         this._colorConverter;
         this._EditableListClass;
         this._editableListInUse = {};
+        this._ComboSelectListClass;
+        this._comboSelectListInUse = {};
         this._activeLink;
     }
 
@@ -46,6 +48,12 @@ export class SeriesListTableClass{
     get editableListInUse() { return this._editableListInUse }
     set editableListInUse(newEditableListInUse) { this._editableListInUse = newEditableListInUse }
 
+    get ComboSelectListClass() { return this._ComboSelectListClass }
+    set ComboSelectListClass(newComboSelectListClass) { this._ComboSelectListClass = newComboSelectListClass }
+
+    get comboSelectListInUse() { return this._comboSelectListInUse }
+    set comboSelectListInUse(newComboSelectListInUse) { this._comboSelectListInUse = newComboSelectListInUse }
+
     get activeLink() { return this._activeLink }
     set activeLink(newactiveLink) { this._activeLink = newactiveLink }
 
@@ -53,19 +61,25 @@ export class SeriesListTableClass{
         let tableBody = document.getElementById(this.tableName).getElementsByTagName('tbody')[0];
         tableBody.addEventListener("click", (e) => {
             switch(true){
-                case (e.target.className === "settingsListButton"):
+                case (e.target.className === 'settingsListButton'):
                     let rowParam = e.target.id.match(/^\d+|\d+\b|\d+(?=\w)/g); //get Table row and list row numbers from button id as array
                     let listObject = this.editableListInUse["lnkRow" + rowParam[0]];
                     listObject.buttonClick(e.target, rowParam);
                     break;
-                case (e.target.className === "lnkSelector"):
+                case (e.target.classList.contains('lnkSelector')):
                     this.closeAllDropDowns();
                     let parentRow = e.target.parentNode.parentNode.id.match(/^\d+|\d+\b|\d+(?=\w)/g);
                     this.showDropDownList(parentRow[0]);
                     break;
-                case (e.target.className === "downBtn" || e.target.className === "upBtn"):
+                case (e.target.className === 'downBtn' || e.target.className === 'upBtn'):
                     this.counterChange(e.target.className, e.target.parentNode.parentNode.id);
-                    break;                
+                    break;
+                case (e.target.classList.contains('anchor')): //comboSelectListDrop
+                    //this.closeAllDropDowns();
+                    let tagRowParam = e.target.parentNode.id.match(/^\d+|\d+\b|\d+(?=\w)/g);
+                    let comboSelectListObject = this.comboSelectListInUse['tagSelector_row' + tagRowParam[0]];
+                    comboSelectListObject.dropClick(e.target.nextSibling, tagRowParam);
+                    break;
             }
         }, false);
         
@@ -80,7 +94,7 @@ export class SeriesListTableClass{
         }, false);
 
         window.onclick = (e) => {
-            if (!e.target.matches('.lnkSelector')) {
+            if (!e.target.classList.contains('ddKeep')) {
                 this.closeAllDropDowns();
             }
         }
@@ -112,10 +126,12 @@ export class SeriesListTableClass{
     }
     
     closeAllDropDowns(){
-        let dropdowns = document.getElementsByClassName("dropdown-content");
+        let dropdowns = document.getElementsByClassName("ddcontent");
         for (let i = 0; i < dropdowns.length; i++) {
-            dropdowns[i].innerHTML = "";
             let openDropdown = dropdowns[i];
+            if (openDropdown.classList.contains('lnkSelector')){
+                dropdowns[i].innerHTML = "";
+            }            
             if (openDropdown.classList.contains('show')) {
                 openDropdown.classList.remove('show');
             }
@@ -345,18 +361,34 @@ export class SeriesListTableClass{
     }
 
     getSettingsLineBody(num = undefined){
+        let TagSelectorBody = this.addTagSelectorObject(num);
+        let lnkSettingsBody = this.addLnkSettingsObject(num);
+
+        let settingsBody = TagSelectorBody + lnkSettingsBody;
+        return settingsBody;
+    }
+
+    addTagSelectorObject(num){
+        let selectorHeader = 'Test tag selector';
+        let tagArr = ['Test Tag 1', 'Test Tag 2', 'Test Tag 3', 'Test Tag 4', 'Test Tag 5', 'Test Tag 6', 'Test Tag 7'];
+        let tagSelectorObj = new this.ComboSelectListClass('tagSelector_row' + num, selectorHeader, tagArr);
+        this.comboSelectListInUse["tagSelector_row"+num] = tagSelectorObj;
+        return tagSelectorObj.getListBody();
+    }
+
+    addLnkSettingsObject(num){
         let lnkArray = [];
         let objList = this.dataObject;
         if (objList && objList.Series && num < objList.Series.length){
             let lnkFieldName = this.designModule.getLinksObjName();
             lnkArray = this.dataObject.Series[num][lnkFieldName];
         }
-        let listLnkObj = new this.EditableListClass('lnkSettings_row' + num, lnkArray, this.activeLink);
-        let settingsBody = listLnkObj.getListBody();
-        this.editableListInUse["lnkRow"+num] = listLnkObj;
 
-        return settingsBody;
+        let listLnkObj = new this.EditableListClass('lnkSettings_row' + num, lnkArray, this.activeLink);
+        this.editableListInUse["lnkRow"+num] = listLnkObj;
+        return listLnkObj.getListBody();
     }
+
 
     setColorByLineDateChange(rowNum, objLine){
         if (objLine && objLine.hasOwnProperty("lastCounterChangeTime")){
@@ -427,4 +459,5 @@ export class SeriesListTableClass{
 
         return result;
     }
+
 }

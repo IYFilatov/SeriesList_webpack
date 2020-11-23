@@ -1,4 +1,3 @@
-
 export function getTableListStructure(){
     return [{domName: "series", domHeader: "Series", domClassaName: "tSeriesName", fieldType: "text", objName: "name"},
             {domName: "", domHeader: "", domClassaName: "", fieldType: "lnk", objName: "links"},
@@ -115,7 +114,7 @@ export function getFilledElementByObjectLine(id, lineNum, objName, listObjLine, 
     if (id == "series" && listObjLine["links"] && listObjLine["links"].length > 0){
         let dropDownId = "row" + lineNum + "_ddLnk";
         val = "<span style='vertical-align: middle'>" + val + "</span>";
-        val += "<div class='dropdown'><input type='button' class = 'lnkSelector'><div id='" + dropDownId + "' class='dropdown-content'></div></div>";
+        val += "<div class='dropdown'><input type='button' class = 'lnkSelector ddKeep'><div id='" + dropDownId + "' class='ddcontent lnkList-content'></div></div>";
     } else if (id == "season" || id == "epWatched") {
         if (disabledCounters === true){
             val = "<div class='counterContainer'> <div class='counterValue'>" + val + "</div></div>";

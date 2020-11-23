@@ -4,6 +4,7 @@ import * as SeriesTableDesign from './SeriesTableDesign.js';
 import {SeriesListTableClass} from './SeriesListTableClass.js';
 import {EditableListClass} from './EditableList.js';
 import {AppSettingsClass} from './AppSettingsClass.js';
+import {ComboSelectListClass} from './ComboSelectList.js';
 
 
 let sListTableObj = new SeriesListTableClass('slist_table', DataProvider.getEmptyObjList());
@@ -19,6 +20,7 @@ function pageInit(){
     sListTableObj.colorConverter = ColorConverter;
     sListTableObj.EditableListClass = EditableListClass;
     sListTableObj.tableStructure = SeriesTableDesign.getTableListStructure();
+    sListTableObj.ComboSelectListClass = ComboSelectListClass;
     
     sListTableObj.fillTableFromObj(DataProvider.getEmptyObjList()); //to show headers while loading
     DataProvider.loadObjectListFromStorage(sListTableObj, sListTableObj.appSettings);
