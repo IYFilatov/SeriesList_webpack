@@ -104,11 +104,12 @@ export class ComboSelectListClass{
     getListBody(){
         let ddContainer = this.listName + '_con';
         let divId = this.listName + '_div';
+        let ulId = this.listName + '_ul';
         let domBody = "";
         domBody += '<div id="' + ddContainer + '" class="dropdown-check-list" tabindex="100">'; 
         domBody += '<span class="anchor ddKeep">' + this.headerText + '</span>';
         domBody += '<div id="' + divId + '" class="ddcontent ddKeep comboTag-content" tabindex="100">';
-        domBody += '<ul>';
+        domBody += '<ul id="' + ulId + '">';
         this.dataArray.forEach((v, ind)=>{
             let liId = this.listName + "_li" + ind;
             domBody +=  '<li id="' + liId + '" class="ddKeep">' + this.getLiContentLine(ind) + '</li>';
