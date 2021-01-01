@@ -27,10 +27,15 @@ export function getEpisodeTemplate(){
     return "{episode}";
 }
 
-export function getTableHeadTags(tStructure){
+export function getTableHeadTags(tStructure, tagBox = null){
     let newHeader = "<tr>";
-    tStructure.filter((v)=> v.domName).forEach((v) => {
-        newHeader += "<th>" + v.domHeader + "</th>";
+    tStructure.filter((v)=> v.domName).forEach((v, ind) => {
+        if (ind == 0 && tagBox){
+            newHeader += "<th>" + v.domHeader + "&nbsp&nbsp" + tagBox + "</th>";
+        } else {
+            newHeader += "<th>" + v.domHeader + "</th>";
+        }
+        
     });
     newHeader += "<th></th></tr>";
     return newHeader;

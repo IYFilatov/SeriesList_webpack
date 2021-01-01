@@ -11,6 +11,7 @@ export class SeriesListTableClass{
         this._editableListInUse = {};
         this._ComboSelectListClass;
         this._comboSelectListInUse = {};
+        this._headerTagSelector = null;
         this._activeLink;
     }
 
@@ -20,6 +21,7 @@ export class SeriesListTableClass{
     set dataObject(newDataObj) {
         if (this.fillTableFromObj(newDataObj)) {
             this._dataObject = newDataObj;
+            this.updateHeader();
         }
     }
 
@@ -57,12 +59,38 @@ export class SeriesListTableClass{
     get activeLink() { return this._activeLink }
     set activeLink(newactiveLink) { this._activeLink = newactiveLink }
 
+    get headerTagSelector() { return this._headerTagSelector }
+    set headerTagSelector(newHeaderTagSelector) { this._headerTagSelector = newHeaderTagSelector }
+
+    get tagsArr(){ return this.getTagsArr(this.dataObject); }
+    set tagsArr(newTagsList){
+        let tagPropertyName = 'TagsList';
+        let objList = this.dataObject;
+        if (objList)
+        {
+            objList[tagPropertyName] = newTagsList;            
+        }
+    }
+
+    get selectedTagsArr(){ return this.getSelectedTagsArr(this.dataObject); }
+    set selectedTagsArr(newTagsList){
+        let tagPropertyName = 'SelectedTagsList';
+        let objList = this.dataObject;
+        if (objList)
+        {
+            objList[tagPropertyName] = newTagsList;            
+        }
+    }
+
     setEventHandlerForSettings(){
-        let tableBody = document.getElementById(this.tableName).getElementsByTagName('tbody')[0];
+        //let tableBody = document.getElementById(this.tableName).getElementsByTagName('tbody')[0];
+        let tagObject;
+        let rowParam;
+        let tableBody = document.getElementById(this.tableName);
         tableBody.addEventListener("click", (e) => {
             switch(true){
                 case (e.target.className === 'settingsListButton'):
-                    let rowParam = e.target.id.match(/^\d+|\d+\b|\d+(?=\w)/g); //get Table row and list row numbers from button id as array
+                    rowParam = e.target.id.match(/^\d+|\d+\b|\d+(?=\w)/g); //get Table row and list row numbers from button id as array
                     let listObject = this.editableListInUse["lnkRow" + rowParam[0]];
                     listObject.buttonClick(e.target, rowParam);
                     break;
@@ -76,19 +104,33 @@ export class SeriesListTableClass{
                     break;
                 case (e.target.classList.contains('anchor')): //comboSelectListDrop
                     //this.closeAllDropDowns();
-                    let tagRowParam = e.target.parentNode.id.match(/^\d+|\d+\b|\d+(?=\w)/g);
-                    let comboSelectListObject = this.comboSelectListInUse['tagSelector_row' + tagRowParam[0]];
-                    comboSelectListObject.dropClick(e.target.nextSibling, tagRowParam);
+                    let comboSelectListObject = this.getComboBoxObject(e.target.parentNode);
+                    comboSelectListObject.dropClick(e.target.nextSibling);
+                    break;
+                case (e.target.classList.contains('comboListButton')):
+                    rowParam = e.target.id.match(/^\d+|\d+\b|\d+(?=\w)/g);
+                    tagObject = this.getComboBoxObject(e.target);
+                    tagObject.buttonClick(e.target, rowParam);
+                    this.saveHeaderTags(e.target);
+                    break;
+                case (e.target.classList.contains('tagCheckbox')):
+                    this.saveHeaderTags(e.target);
                     break;
             }
         }, false);
         
         tableBody.addEventListener("keydown", (e) => {
+            let rowParam = '';
             switch(true){
                 case (e.keyCode === 13 && e.target.className === "ListInput"):
-                    let rowParam = e.target.id.match(/^\d+|\d+\b|\d+(?=\w)/g);
+                    rowParam = e.target.id.match(/^\d+|\d+\b|\d+(?=\w)/g);
                     let listObject = this.editableListInUse["lnkRow" + rowParam[0]];
                     listObject.enterKeyDown(e.target, rowParam);
+                    break;
+                case (e.keyCode === 13 && e.target.classList.contains('TagInput')):
+                    let tagObject = this.getComboBoxObject(e.target);
+                    tagObject.enterKeyDown(e.target);
+                    this.saveHeaderTags(e.target);
                     break;
             }
         }, false);
@@ -99,6 +141,41 @@ export class SeriesListTableClass{
             }
         }
 
+    }
+
+    getComboBoxObject(node){
+        let comboSelectListObject;
+        let tagRowParam = null;
+        if (node.id.startsWith("tagSelector_head")){
+            comboSelectListObject = this.headerTagSelector;                        
+        } else {
+            tagRowParam = node.id.match(/^\d+|\d+\b|\d+(?=\w)/g);
+            comboSelectListObject = this.comboSelectListInUse['tagSelector_row' + tagRowParam[0]];
+        }
+
+        return comboSelectListObject;
+    }
+
+    getTagsArr(objList = this.dataObject){ 
+        let tagPropertyName = 'TagsList';
+        let tagList = [];
+        if (objList && objList.hasOwnProperty(tagPropertyName)){
+            if (Array.isArray(tagList)){
+                tagList = objList[tagPropertyName];
+            }
+        }
+        return tagList;
+    }
+
+    getSelectedTagsArr(objList = this.dataObject){ 
+        let tagPropertyName = 'SelectedTagsList';
+        let tagList = [];
+        if (objList && objList.hasOwnProperty(tagPropertyName)){
+            if (Array.isArray(tagList)){
+                tagList = objList[tagPropertyName];
+            }
+        }
+        return tagList;
     }
 
     showDropDownList(num){
@@ -135,6 +212,17 @@ export class SeriesListTableClass{
             if (openDropdown.classList.contains('show')) {
                 openDropdown.classList.remove('show');
             }
+        }
+    }
+
+    saveHeaderTags(node){
+        if (node && node.id.startsWith("tagSelector_head")){
+            this.tagsArr = this.headerTagSelector.exportDataList(false);
+            this.selectedTagsArr = this.headerTagSelector.exportDataList(true);
+            this.headerTagSelector.setNewData(this.tagsArr, this.selectedTagsArr);
+            this.headerTagSelector.updateListBody();
+            this.callObjListSave(this.dataObject);
+            this.refreshDom(false);
         }
     }
 
@@ -196,16 +284,22 @@ export class SeriesListTableClass{
         return Object.keys(this.getObjectLineAttributesAsObject());
     }
 
-    refreshDom(){
-        this.fillTableFromObj(this.dataObject);
+    refreshDom(refreshHeader = true){
+        this.fillTableFromObj(this.dataObject, refreshHeader);
     }
 
-    fillTableFromObj(dataObject){
+    fillTableFromObj(dataObject, refreshHeader = true){
         this.designModule.ShowSyncSaveCrashWarning(this.appSettings.getSyncCrash());
         let isSaved = false;
         if (dataObject && dataObject.hasOwnProperty("Series")){
-            this.clearTableRows();
-            dataObject.Series.forEach((v) => {
+            this.clearTableRows(refreshHeader);
+            dataObject.Series.map((v, ind)=> {
+                return Object.assign({index: ind}, v);
+            }).filter((v)=> {
+                return this.getTagsArr(dataObject).length == 0 
+                        || this.getSelectedTagsArr(dataObject).length == 0 
+                        || this.getSelectedTagsArr(dataObject).some((gT)=> { return this.getItemSelectedTags(v).includes(gT) })
+            }).forEach((v) => {
                 this.addRow(v);
             });
             isSaved = true;
@@ -235,11 +329,26 @@ export class SeriesListTableClass{
 
     updateHeader(){
         let tableHeader = document.getElementById(this._tName).getElementsByTagName("thead")[0];
-        tableHeader.innerHTML = this.designModule.getTableHeadTags(this.tableStructure);
+        let headerTagBox = this.setHeaderTagBox();
+        tableHeader.innerHTML = this.designModule.getTableHeadTags(this.tableStructure, headerTagBox);
     }
 
-    clearTableRows(){
-        this.updateHeader();
+    setHeaderTagBox(){
+        let selectorHeadText = "Tag filter";
+        
+        if (!this.headerTagSelector){
+            this.headerTagSelector = new this.ComboSelectListClass('tagSelector_head', selectorHeadText, this.tagsArr, this.selectedTagsArr, true);
+        } else {
+            this.headerTagSelector.setNewData(this.tagsArr, this.selectedTagsArr);
+        }
+        
+        return this.headerTagSelector.getFullBody();
+    }
+
+    clearTableRows(refreshHeader = true){
+        if (refreshHeader){
+            this.updateHeader();
+        }
         let tableBody = document.getElementById(this._tName).getElementsByTagName("tbody")[0];
         tableBody.innerHTML="";
         this.editableListInUse = {};
@@ -287,8 +396,7 @@ export class SeriesListTableClass{
     }
 
     save_row(num){
-        let objList = this.dataObject;
-        let objListArr = objList.Series;
+        let objListArr = this.dataObject.Series;
 
         if (num - objListArr.length > 0){
             alert("Please save the lines in order it added!");
@@ -317,9 +425,11 @@ export class SeriesListTableClass{
             }
         });
 
+        this.updateRowTags(num);
+
         this.delSettingsRow(num);
         document.getElementById("row"+num).innerHTML = this.designModule.getListLineTags(num, this, objLine, this.appSettings.isCurrentStorageClosed());
-        this.callObjListSave(objList);
+        this.callObjListSave(this.dataObject);
         this.setColorByLineDateChange(num, objLine);
         this.setRowStyleByActiveTabLink(num, objLine);
     }
@@ -369,11 +479,45 @@ export class SeriesListTableClass{
     }
 
     addTagSelectorObject(num){
-        let selectorHeader = 'Test tag selector';
-        let tagArr = ['Test Tag 1', 'Test Tag 2', 'Test Tag 3', 'Test Tag 4', 'Test Tag 5', 'Test Tag 6', 'Test Tag 7'];
-        let tagSelectorObj = new this.ComboSelectListClass('tagSelector_row' + num, selectorHeader, tagArr);
+        let selectorHeader = 'Tag selector';
+        let objLine = this.dataObject.Series[num];
+        let selectedArr = this.getItemSelectedTags(objLine);
+        
+        let tagSelectorObj = new this.ComboSelectListClass('tagSelector_row' + num, selectorHeader, this.tagsArr, selectedArr, false);
+        tagSelectorObj.setElementWidth(235);
         this.comboSelectListInUse["tagSelector_row"+num] = tagSelectorObj;
-        return tagSelectorObj.getListBody();
+        return tagSelectorObj.getFullBody();
+    }
+
+    getItemSelectedTags(item){
+        let propertyName = 'selectedTags';
+        let selectedArr = [];
+        if (item && item.hasOwnProperty(propertyName)){
+            selectedArr = item[propertyName];
+        }
+
+        return selectedArr;
+    }
+
+    updateRowTags(rowNum){
+        let tagSelectorObject = this.comboSelectListInUse["tagSelector_row" + rowNum];
+        let objLine = this.dataObject.Series[rowNum];
+        objLine.selectedTags = tagSelectorObject.exportDataList(true);
+        this.mergeFulllistTags(tagSelectorObject.exportDataList(false));
+    }
+
+    mergeFulllistTags(closedTagList){
+        let objList = this.dataObject;
+        let tagsList = this.tagsArr;
+        if (objList && closedTagList && Array.isArray(closedTagList)){
+            closedTagList.forEach((v)=>{
+                if (!tagsList.includes(v))
+                {
+                    tagsList.push(v);
+                }
+            })
+            this.tagsArr = tagsList;
+        }
     }
 
     addLnkSettingsObject(num){
