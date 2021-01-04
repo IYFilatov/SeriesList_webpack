@@ -6,16 +6,6 @@ export class ComboSelectListClass{
         this._markedArr = markedArr;
         this._isFull = isFull;
         this._customWidth = 0;
-        
-        /*
-        let checkList = document.getElementById(listName);
-        checkList.getElementsByClassName('anchor')[0].onclick = function(evt) {
-          if (checkList.classList.contains('visible'))
-            checkList.classList.remove('visible');
-          else
-            checkList.classList.add('visible');
-        }
-        */
     }
 
     get listName() { return this._listName }

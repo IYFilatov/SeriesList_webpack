@@ -25,6 +25,16 @@ export class SeriesListTableClass{
         }
     }
 
+    get seriesList(){
+        let objList = this.dataObject;
+        let seriesArr = [];
+        if (objList && objList.hasOwnProperty('Series')){
+            seriesArr = objList.Series;
+        }
+
+        return seriesArr
+    }
+
     get tableStructure() { return this._tableStructure }
     set tableStructure(newTableStructure) { this._tableStructure = newTableStructure }
 
@@ -219,12 +229,26 @@ export class SeriesListTableClass{
         if (node && node.id.startsWith("tagSelector_head")){
             this.tagsArr = this.headerTagSelector.exportDataList(false);
             this.selectedTagsArr = this.headerTagSelector.exportDataList(true);
+            if (node.id.indexOf("_delBtn") !== -1){
+                this.clearDeletedTags();
+            }
             this.headerTagSelector.setNewData(this.tagsArr, this.selectedTagsArr);
             this.headerTagSelector.updateListBody();
             this.callObjListSave(this.dataObject);
             this.refreshDom(false);
         }
     }
+
+    clearDeletedTags(){
+        this.seriesList.forEach((vSL) => {
+            let selectedArr = this.getItemSelectedTags(vSL).filter((vTag) => {
+                return this.tagsArr.includes(vTag);
+            });
+            
+            this.setItemSelectedTags(vSL, selectedArr);
+        });                
+    }
+
 
     counterChange(btnClassName, areaId){
         let rowNum = areaId.match(/^\d+|\d+\b|\d+(?=\w)/g);
@@ -293,15 +317,14 @@ export class SeriesListTableClass{
         let isSaved = false;
         if (dataObject && dataObject.hasOwnProperty("Series")){
             this.clearTableRows(refreshHeader);
-            dataObject.Series.map((v, ind)=> {
-                return Object.assign({index: ind}, v);
-            }).filter((v)=> {
-                return this.getTagsArr(dataObject).length == 0 
-                        || this.getSelectedTagsArr(dataObject).length == 0 
-                        || this.getSelectedTagsArr(dataObject).some((gT)=> { return this.getItemSelectedTags(v).includes(gT) })
-            }).forEach((v) => {
-                this.addRow(v);
+            dataObject.Series.forEach((v, ind) => {
+                if (this.getTagsArr(dataObject).length == 0 
+                    || this.getSelectedTagsArr(dataObject).length == 0 
+                    || this.getSelectedTagsArr(dataObject).some((gT)=> { return this.getItemSelectedTags(v).includes(gT) })){
+                        this.addRow(Object.assign({index: ind}, v));
+                    }                
             });
+
             isSaved = true;
         }
         this.addEditRowIfEmpty();
@@ -358,23 +381,33 @@ export class SeriesListTableClass{
         let tableList = document.getElementById(this._tName).getElementsByTagName("tbody")[0];
         let openedSettings = document.getElementsByClassName(this.designModule.getSettingsStringClassName());
         let tableLength = tableList.rows.length;
-        let listLength = tableLength - openedSettings.length;
-    
+        let lastOpenedSettingsNum = 0;
+        //let listLength = tableLength - openedSettings.length;
+        
         let objList = this.dataObject;
-        if (!listObjLine && objList.Series && listLength - objList.Series.length > 0) {
+        let rowIndex = objList.Series.length;
+
+        if (listObjLine && listObjLine.hasOwnProperty('index')){
+            rowIndex = listObjLine.index;
+        } else if (openedSettings.length > 0) {
+            lastOpenedSettingsNum = parseInt(openedSettings[openedSettings.length-1].id.match(/^\d+|\d+\b|\d+(?=\w)/g));
+        }
+
+        if (!listObjLine && objList.Series && lastOpenedSettingsNum - objList.Series.length >= 0) {
             return;
         }
-    
-        let newRow = "<tr id='row" + listLength + "'>";
-        newRow += this.designModule.getListLineTags(listLength, this, listObjLine, this.appSettings.isCurrentStorageClosed());
+
+        
+        let newRow = "<tr id='row" + rowIndex + "'>";
+        newRow += this.designModule.getListLineTags(rowIndex, this, listObjLine, this.appSettings.isCurrentStorageClosed());
         newRow += "</tr>";
     
         tableList.insertRow(tableLength).outerHTML=newRow;
         if (!listObjLine){
-            this.addSettingsRow(listLength);
+            this.addSettingsRow(rowIndex);
         }
-        this.setColorByLineDateChange(listLength, listObjLine);
-        this.setRowStyleByActiveTabLink(listLength, listObjLine);
+        this.setColorByLineDateChange(rowIndex, listObjLine);
+        this.setRowStyleByActiveTabLink(rowIndex, listObjLine);
     }
 
     edit_row(num){
@@ -489,6 +522,13 @@ export class SeriesListTableClass{
         return tagSelectorObj.getFullBody();
     }
 
+    updateRowTags(rowNum){
+        let tagSelectorObject = this.comboSelectListInUse["tagSelector_row" + rowNum];
+        let objLine = this.dataObject.Series[rowNum];
+        this.setItemSelectedTags(objLine, tagSelectorObject.exportDataList(true));
+        this.mergeFulllistTags(tagSelectorObject.exportDataList(false));
+    }
+
     getItemSelectedTags(item){
         let propertyName = 'selectedTags';
         let selectedArr = [];
@@ -499,11 +539,15 @@ export class SeriesListTableClass{
         return selectedArr;
     }
 
-    updateRowTags(rowNum){
-        let tagSelectorObject = this.comboSelectListInUse["tagSelector_row" + rowNum];
-        let objLine = this.dataObject.Series[rowNum];
-        objLine.selectedTags = tagSelectorObject.exportDataList(true);
-        this.mergeFulllistTags(tagSelectorObject.exportDataList(false));
+    setItemSelectedTags(item, newSelectedTagsArr){
+        let propertyName = 'selectedTags';
+        if (newSelectedTagsArr.length == 0){
+            //if (item.hasOwnProperty(propertyName)){
+                delete item[propertyName];
+            //}
+        } else {
+            item[propertyName] = newSelectedTagsArr;        
+        }        
     }
 
     mergeFulllistTags(closedTagList){
